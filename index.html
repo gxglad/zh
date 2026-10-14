@@ -18,30 +18,33 @@
   <div class="intro__noise"></div>
 
   <div class="intro__center">
-    <div class="ripple" id="ripple"></div>
+    <!-- 唱片区：涟漪与唱片共用同一个中心点 -->
+    <div class="vinyl-stage">
+      <div class="ripple" id="ripple"></div>
 
-    <div class="vinyl" id="vinyl">
-      <div class="vinyl__disc" id="vinylDisc">
-        <div class="vinyl__grooves"></div>
-        <div class="vinyl__sheen"></div>
-        <div class="vinyl__label">
-          <span class="vinyl__labelTop">MY</span>
-          <span class="vinyl__labelMid">PLAYLIST</span>
-          <span class="vinyl__labelBot">2026</span>
+      <div class="vinyl" id="vinyl">
+        <div class="vinyl__disc" id="vinylDisc">
+          <div class="vinyl__grooves"></div>
+          <div class="vinyl__sheen"></div>
+          <div class="vinyl__label">
+            <span class="vinyl__labelTop">MY</span>
+            <span class="vinyl__labelMid">PLAYLIST</span>
+            <span class="vinyl__labelBot">2026</span>
+          </div>
+          <div class="vinyl__hole"></div>
         </div>
-        <div class="vinyl__hole"></div>
-      </div>
-      <div class="tonearm" id="tonearm">
-        <div class="tonearm__pivot"></div>
-        <div class="tonearm__bar"></div>
-        <div class="tonearm__head"></div>
+        <div class="tonearm" id="tonearm">
+          <div class="tonearm__pivot"></div>
+          <div class="tonearm__bar"></div>
+          <div class="tonearm__head"></div>
+        </div>
       </div>
     </div>
 
     <div class="intro__load">
       <div class="intro__bar"><i id="introBar"></i></div>
       <div class="intro__meta">
-        <span class="intro__caption">正在载入歌单</span>
+        <span class="intro__caption" id="introCaption">正在载入歌单</span>
         <span class="intro__pct" id="introPct">0%</span>
       </div>
     </div>
