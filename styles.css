@@ -51,14 +51,13 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 ::-webkit-scrollbar-thumb{ background: linear-gradient(var(--a1), var(--a3)); border-radius:9px; }
 
 /* ============================================================
-   1. 入场：黑胶自动旋转
+   1. 载入页：黑胶在正中间转动 + 进度条
    ============================================================ */
 .intro{
   position:fixed; inset:0; z-index:20000;
   background: radial-gradient(120% 90% at 50% 40%, #12141b 0%, #07080b 60%, #040507 100%);
-  display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr);
-  align-items:center; gap: clamp(20px,5vw,80px);
-  padding: clamp(24px,5vh,70px) clamp(24px,6vw,100px);
+  display:grid; place-items:center;
+  padding: 24px;
   transition: opacity 1s var(--ease), visibility 1s var(--ease);
 }
 .intro.is-done{ opacity:0; visibility:hidden; pointer-events:none; }
@@ -73,14 +72,15 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   66%{transform:translate(3%,-2%)} 100%{transform:translate(0,0)}
 }
 
-/* ---- 唱片台 ---- */
-.intro__stage{
-  position:relative; display:grid; place-items:center;
-  min-height: min(62vh, 520px);
+/* ---- 居中容器 ---- */
+.intro__center{
+  position:relative; display:grid; justify-items:center;
+  gap: clamp(26px,5vh,52px);
 }
 
 .ripple{
-  position:absolute; width:min(56vh,460px); aspect-ratio:1; border-radius:50%;
+  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:min(60vh,470px); aspect-ratio:1; border-radius:50%;
   pointer-events:none; opacity:1;
 }
 .ripple span{
@@ -98,9 +98,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 /* ---- 黑胶本体 ---- */
 .vinyl{
   position:relative;
-  width: min(52vh, 400px); aspect-ratio:1;
+  width: min(46vh, 360px); aspect-ratio:1;
   filter: drop-shadow(0 40px 80px rgba(0,0,0,.8));
-  cursor:pointer;
 }
 .vinyl__disc{
   position:absolute; inset:0; border-radius:50%;
@@ -111,8 +110,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,.07),
     inset 0 0 60px rgba(0,0,0,.9);
-  /* 进页面即自动开转，不需要点击 */
-  animation: spinDisc 4.2s linear infinite;
+  /* 载入期间自动旋转；一圈 = 进度条走满（时长由 JS 用 --turn 设定，保证两者同步） */
+  animation: spinDisc var(--turn, 3.8s) linear infinite;
 }
 .intro.is-done .vinyl__disc{ animation-play-state: paused; }
 @keyframes spinDisc{ to{ transform: rotate(360deg) } }
@@ -157,7 +156,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   background:#060607; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
 }
 
-/* ---- 唱针（默认已落针） ---- */
+/* ---- 唱针（载入时已落针） ---- */
 .tonearm{
   position:absolute; right:5%; top:1.5%;
   width:9px; height:60%;
@@ -191,98 +190,32 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow: 0 0 10px var(--a1);
 }
 
-/* ---- 电平表 ---- */
-.meters{
-  position:absolute; bottom:0; left:50%; transform:translateX(-50%);
-  display:flex; align-items:flex-end; gap:3px; height:44px; opacity:1;
+/* ---- 进度条（跟着唱片转动一起加载） ---- */
+.intro__load{
+  width: min(74vw, 380px);
+  opacity:0; transform:translateY(10px);
+  animation: riseIn .8s var(--ease) .3s forwards;
 }
-.meters i{
-  width:3px; border-radius:2px; height:12%;
-  background: linear-gradient(to top, var(--a3), var(--a1));
-  transition: height .1s linear, background .9s var(--ease);
-  transform-origin: bottom;
+.intro__bar{
+  position:relative; height:2px; border-radius:2px;
+  background: rgba(255,255,255,.11); overflow:hidden;
 }
-
-/* ---- 右侧文字 ---- */
-.intro__text{ position:relative; }
-.intro__eyebrow{
-  margin:0 0 18px; font-family:var(--mono); font-size:10px;
-  letter-spacing:.36em; color:var(--ink-faint); text-transform:uppercase;
-  opacity:0; transform:translateY(14px); animation: riseIn .9s var(--ease) .2s forwards;
+.intro__bar i{
+  display:block; height:100%; width:0%;
+  background: linear-gradient(90deg, var(--a2), var(--a1));
+  box-shadow: 0 0 14px -1px var(--a1);
+  transition: width .22s linear;
 }
-.intro__title{ margin:0; font-family:var(--serif); font-weight:900; line-height:1; }
-.intro__t1{
-  display:inline-block;
-  font-size: clamp(52px, 9.5vw, 118px); letter-spacing:-.01em;
-  background: linear-gradient(100deg, var(--ink) 20%, var(--a1) 55%, var(--a2) 90%);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-  background-size:220% 100%;
-  animation: shimmer 7s var(--ease-io) infinite, riseIn 1.1s var(--ease) .34s backwards;
+.intro__meta{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-top:12px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.24em;
+  text-transform:uppercase; color:var(--ink-faint);
 }
-@keyframes shimmer{
-  0%,100%{ background-position:0% 50% } 50%{ background-position:100% 50% }
-}
-.intro__sub{
-  margin:22px 0 0; font-size: clamp(14px,1.5vw,17px); color:var(--ink-dim);
-  letter-spacing:.02em;
-  opacity:0; transform:translateY(14px); animation: riseIn .9s var(--ease) .5s forwards;
-}
+.intro__pct{ color:var(--ink-dim); font-variant-numeric: tabular-nums; }
+.intro__caption{ transition: color .5s var(--ease); }
+.intro.is-loaded .intro__caption{ color: var(--a1); }
 @keyframes riseIn{ to{ opacity:1; transform:none } }
-
-.intro__ready{
-  margin-top: clamp(30px,5vh,54px);
-  display:flex; align-items:center; gap:18px;
-  opacity:0; transform:translateY(14px); animation: riseIn .9s var(--ease) .68s forwards;
-}
-.bigplay{
-  position:relative; width:74px; height:74px; border-radius:50%;
-  display:grid; place-items:center; flex:0 0 auto;
-  background: var(--ink); color:#0a0a0a;
-  transition: transform .35s var(--ease), background .8s var(--ease);
-}
-.bigplay svg{ width:27px; height:27px; fill:currentColor; }
-.bigplay:hover{ transform:scale(1.08) }
-.bigplay:active{ transform:scale(.93) }
-.bigplay__ring{
-  position:absolute; inset:0; border-radius:50%;
-  border:1px solid var(--a1); animation: pulseRing 2.2s var(--ease-io) infinite;
-}
-@keyframes pulseRing{ 0%{transform:scale(1);opacity:.85} 100%{transform:scale(1.7);opacity:0} }
-.intro__hint{
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.17em;
-  color: var(--ink-faint); transition: color .5s var(--ease);
-}
-.intro.is-staged .intro__hint{ color: var(--a1); }
-
-/* ---- 入场曲目清单（2.4s 后浮现，点击即播） ---- */
-.intro__list{
-  list-style:none; margin: clamp(22px,3.5vh,38px) 0 0; padding:0;
-  max-width: 520px;
-  opacity:0; max-height:0; overflow:hidden;
-  transition: opacity .7s var(--ease), max-height .8s var(--ease);
-}
-.intro.is-staged .intro__list{ opacity:1; max-height:340px; }
-.intro__list li{
-  position:relative; display:flex; align-items:baseline; gap:12px;
-  padding: 9px 30px 9px 12px; border-radius:6px; cursor:pointer;
-  font-size:13.5px; color:var(--ink-dim);
-  border-bottom:1px solid var(--line-soft);
-  transition: background .35s var(--ease), color .35s var(--ease), padding-left .35s var(--ease);
-}
-.intro__list li:hover{ background:rgba(255,255,255,.05); color:var(--ink); padding-left:18px; }
-.intro__list li::after{
-  content:'\25B6'; position:absolute; right:10px; top:50%;
-  transform:translateY(-50%) scale(.7);
-  font-size:9px; color:var(--c); opacity:0;
-  transition: all .35s var(--ease);
-}
-.intro__list li:hover::after{ opacity:1; transform:translateY(-50%) scale(1); }
-.intro__list .n{ font-family:var(--mono); font-size:10px; color:var(--ink-faint); flex:0 0 auto; }
-.intro__list .t{ font-family:var(--serif); font-weight:600; color:var(--ink); flex:1 1 auto; }
-.intro__list .a{
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.12em;
-  color:var(--ink-faint); text-transform:uppercase; flex:0 0 auto;
-}
 
 /* ============================================================
    2. 氛围层
@@ -877,17 +810,9 @@ body.is-ready .hero__names{ opacity:.55 }
    9. 响应式
    ============================================================ */
 @media (max-width: 1080px){
-  .intro{
-    grid-template-columns:1fr;
-    justify-items:center; text-align:center;
-    gap: clamp(16px,4vh,40px);
-    padding: clamp(20px,4vh,50px) 24px;
-  }
-  .intro__stage{ min-height: min(42vh,380px) }
-  .vinyl{ width: min(38vh,300px) }
+  .vinyl{ width: min(42vh,320px) }
   .vinyl__labelMid{ font-size:clamp(11px,1.6vh,17px) }
-  .intro__ready{ justify-content:center }
-  .intro__list{ text-align:left }
+  .ripple{ width:min(54vh,400px) }
 }
 
 @media (max-width: 980px){
@@ -920,8 +845,7 @@ body.is-ready .hero__names{ opacity:.55 }
   .play{ width:56px; height:56px }
   .artist__bio::first-letter{ font-size:2.1em }
   .track__year{ margin-left:0; width:100% }
-  .intro__list{ max-width:100% }
-  .intro__t1{ font-size:clamp(44px,15vw,84px) }
+  .intro__load{ width:min(80vw,320px) }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -930,5 +854,5 @@ body.is-ready .hero__names{ opacity:.55 }
     transition-duration:.001ms !important;
   }
   html{ scroll-behavior:auto }
-  .ripple,.bigplay__ring,.play__pulse{ display:none }
+  .ripple,.play__pulse{ display:none }
 }
