@@ -304,13 +304,14 @@
     /* 闸门：第一首没好就压在 GATE 以内 */
     if (!firstReady && elapsed < FIRST_MAX_MS) target = Math.min(target, GATE);
 
-    /* 用真实下载量微调：下载飞快时可以稍微提前，但不影响整体匀速 */
+    /* 用真实下载量微调：下载飞快时可略微提前（但不越过时间基准太多） */
     if (!firstReady && firstBytes > 0) {
       const est = (firstBytes / EST_FIRST) * GATE;
-      target = Math.max(target * 0.55, Math.min(est, GATE));
+      target = Math.min(Math.max(target, Math.min(est, GATE)), GATE);
     }
 
-    shown = clamp(target, 0, 100);
+    /* 只增不减：避免估算值波动导致进度回退 */
+    shown = clamp(Math.max(shown, target), 0, 100);
     introBar.style.width = shown.toFixed(2) + '%';
     introPct.textContent = Math.round(shown) + '%';
 
