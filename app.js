@@ -215,10 +215,10 @@
   });
 
   /* ============================================================
-     2. 载入页：黑胶转动 + 真实预加载进度
-     把 5 首歌全部拉下来存成 Blob，进度来自真实字节数。
-     好处有两个：① 进度条不再是一段一段跳；② 之后播放 / 拖进度
-     完全不卡，因为不再依赖网络分段请求。
+     2. 载入页：黑胶转动 + 预加载
+     策略：只等「第一首」完整下载完就进站（约 5MB，快），
+     其余四首在后台按顺序继续缓存。
+     这样既进站快，点开歌又不会卡；而且任何一首失败都不影响进门。
      ============================================================ */
   const intro     = $('#intro');
   const ripple    = $('#ripple');
@@ -229,6 +229,7 @@
   [0, 1, 2].forEach(() => ripple.appendChild(document.createElement('span')));
 
   let phase = 'loading';
+  const preloadDone = [];   // 已缓存完成的曲目（供调试查看）
 
   function enter() {
     if (phase === 'out') return;
@@ -244,84 +245,85 @@
     /* 进站后不自动播放，等用户主动点 */
   }
 
-  /* ---- 预加载 ---- */
-  const MIN_SHOW = 1500;    // 最快也要让唱片转 1.5 秒，别一闪而过
-  const MAX_WAIT = 20000;   // 网络太慢时兜底放行，不让人干等
-  const t0 = performance.now();
-
-  let loadedBytes = 0;
-  let totalBytes = 0;
-  let shown = 0;            // 屏幕上显示的进度（平滑后的值）
-  let finished = false;
-
-  /* 每首：拉全量 → 存 Blob URL，之后播放零延迟 */
+  /* ---- 单首下载：拉全量 → 存 Blob URL ---- */
   function preloadOne(song) {
     return fetch(song.file, { cache: 'force-cache' })
       .then((res) => {
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        const len = Number(res.headers.get('content-length')) || 0;
-        totalBytes += len;
-
         if (!res.body || !res.body.getReader) {
-          return res.blob().then((b) => { loadedBytes += len || b.size; song.blobUrl = URL.createObjectURL(b); });
+          return res.blob().then((b) => { song.blobUrl = URL.createObjectURL(b); });
         }
-
         const reader = res.body.getReader();
         const chunks = [];
         return (function pump() {
           return reader.read().then((r) => {
             if (r.done) {
-              const blob = new Blob(chunks, { type: 'audio/mpeg' });
-              song.blobUrl = URL.createObjectURL(blob);
+              song.blobUrl = URL.createObjectURL(new Blob(chunks, { type: 'audio/mpeg' }));
               return;
             }
             chunks.push(r.value);
-            loadedBytes += r.value.length;
+            if (song === SONGS[0]) firstBytes += r.value.length;   // 只统计第一首用于进度
             return pump();
           });
         })();
       })
-      .catch(() => null);   // 单首失败不阻断，回退用原地址流式播放
+      .then(() => { preloadDone.push(song.title); })
+      .catch(() => null);   // 失败不阻断：回退成网络流式播放
   }
 
-  const preloadAll = Promise.all(SONGS.map(preloadOne));
+  /* ---- 第一首：决定什么时候可以进站 ---- */
+  const FIRST_MIN_MS = 1600;   // 最短展示时间，别一闪而过
+  const FIRST_MAX_MS = 9000;   // 第一首太久没下完也放行，不让人干等
+  const EST_FIRST = 5 * 1024 * 1024;   // 第一首约 5MB，用于估算进度
+  const t0 = performance.now();
+  let firstBytes = 0;
+  let firstReady = false;
+  let shown = 0;          // 当前显示的进度百分比
+  let finished = false;   // 是否已判定可进站
 
-  /* 进度条：以「时间」为主轴匀速推进，下载只作为闸门。
-     —— 时间主轴保证绝对平滑，不受网络分段、帧率高低影响。
-     —— 下载没完成时把进度压在 90% 以内，完成后再走完最后一段。 */
-  const DURATION = 2000;   // 从 0 到 100% 的基准时长（毫秒）
-  const GATE = 90;         // 未下载完时的进度上限
+  const firstLoad = preloadOne(SONGS[0]).then(() => { firstReady = true; });
+
+  /* 其余四首在后台顺序缓存，不参与进度、不拦进门 */
+  firstLoad.then(() => {
+    SONGS.slice(1).reduce((chain, s) => chain.then(() => preloadOne(s)), Promise.resolve());
+  });
+
+  /* ---- 进度条：时间主轴匀速推进，用第一首的下载量做闸门 ---- */
+  const DURATION = 2200;   // 0 → 100% 的基准时长
+  const GATE = 92;         // 第一首没下完时，进度压在这个值以内
 
   (function loadLoop(now) {
     if (phase === 'out') return;
     requestAnimationFrame(loadLoop);
 
     const elapsed = now - t0;
-    const allLoaded = totalBytes > 0 && loadedBytes >= totalBytes;
 
-    /* 时间基准进度：匀速，永远平滑 */
+    /* 时间基准：绝对匀速，不受网络分段影响，所以绝不会一断一断 */
     let target = (elapsed / DURATION) * 100;
 
-    /* 闸门：还没下完就不让冲过 GATE */
-    if (!allLoaded) target = Math.min(target, GATE);
+    /* 闸门：第一首没好就压在 GATE 以内 */
+    if (!firstReady && elapsed < FIRST_MAX_MS) target = Math.min(target, GATE);
 
-    /* 目标本身已是平滑直线，直接跟随即可；留一点点缓动防止数值抖动 */
-    shown = target;
+    /* 用真实下载量微调：下载飞快时可以稍微提前，但不影响整体匀速 */
+    if (!firstReady && firstBytes > 0) {
+      const est = (firstBytes / EST_FIRST) * GATE;
+      target = Math.max(target * 0.55, Math.min(est, GATE));
+    }
 
-    const pct = clamp(shown, 0, 100);
-    introBar.style.width = pct.toFixed(2) + '%';
-    introPct.textContent = Math.round(pct) + '%';
+    shown = clamp(target, 0, 100);
+    introBar.style.width = shown.toFixed(2) + '%';
+    introPct.textContent = Math.round(shown) + '%';
 
-    /* 下载完成 且 进度走满 → 收尾进站 */
-    if (allLoaded && pct >= 99.9 && !finished) {
+    /* 可以进站的条件：第一首已就绪（或超时兜底）＋ 最短展示时间已过 */
+    const canEnter = (firstReady || elapsed >= FIRST_MAX_MS) && elapsed >= FIRST_MIN_MS;
+
+    if (canEnter && !finished) {
       finished = true;
       introBar.style.width = '100%';
       introPct.textContent = '100%';
-      preloadAll.then(() => {
-        intro.classList.add('is-loaded');
-        introCap.textContent = '载入完成';
-        setTimeout(enter, 320);
-      });
+      intro.classList.add('is-loaded');
+      introCap.textContent = firstReady ? '载入完成' : '先听着，后面继续载入';
+      setTimeout(enter, 320);
     }
   })(t0);
 
