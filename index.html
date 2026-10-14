@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的歌单</title>
+<meta name="description" content="我的歌单 —— 法老、回春丹、门尼、犬儒、草东没有派对。每首都是我反复循环的那一首，点播放直接从高潮听起。">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;900&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="is-loading">
+
+<!-- ══════════════ 入场：黑胶自动旋转 ══════════════ -->
+<div class="intro" id="intro">
+  <div class="intro__noise"></div>
+
+  <div class="intro__stage">
+    <div class="ripple" id="ripple"></div>
+
+    <div class="vinyl" id="vinyl" role="button" tabindex="0" aria-label="开始播放我的歌单">
+      <div class="vinyl__disc">
+        <div class="vinyl__grooves"></div>
+        <div class="vinyl__sheen"></div>
+        <div class="vinyl__label">
+          <span class="vinyl__labelTop">MY</span>
+          <span class="vinyl__labelMid">PLAYLIST</span>
+          <span class="vinyl__labelBot">2026</span>
+        </div>
+        <div class="vinyl__hole"></div>
+      </div>
+      <div class="tonearm" id="tonearm">
+        <div class="tonearm__pivot"></div>
+        <div class="tonearm__bar"></div>
+        <div class="tonearm__head"></div>
+      </div>
+    </div>
+
+    <div class="meters" id="meters"></div>
+  </div>
+
+  <div class="intro__text">
+    <p class="intro__eyebrow">NOW PLAYING · FROM MY OWN PLAYLIST</p>
+    <h1 class="intro__title"><span class="intro__t1">我的歌单</span></h1>
+    <p class="intro__sub" id="introSub">五个名字 · 五首我一听再听的歌</p>
+
+    <div class="intro__ready">
+      <button class="bigplay" id="enterBtn" aria-label="开始播放">
+        <span class="bigplay__ring"></span>
+        <svg viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+      </button>
+      <span class="intro__hint" id="introHint">点击唱片 · 开始播放</span>
+    </div>
+
+    <ul class="intro__list" id="introList"></ul>
+  </div>
+</div>
+
+<!-- ══════════════ 氛围层 ══════════════ -->
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<canvas class="viz" id="viz" aria-hidden="true"></canvas>
+<div class="aurora" id="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="brand" id="brand">
+  <span class="brand__mark">我的歌单</span>
+  <span class="brand__sub">MY PLAYLIST</span>
+</header>
+
+<nav class="rail" id="rail" aria-label="章节导航"></nav>
+
+<!-- ══════════════ 播放器 ══════════════ -->
+<div class="dock" id="dock">
+  <div class="dock__glow" id="dockGlow"></div>
+
+  <div class="dock__cover">
+    <div class="dock__disc" id="dockDisc"><i></i></div>
+  </div>
+
+  <div class="dock__meta">
+    <div class="dock__name" id="dockName">还没有开始播放</div>
+    <div class="dock__artist" id="dockArtist">点任意一首，从高潮直接听起</div>
+  </div>
+
+  <div class="dock__seek" id="dockSeek">
+    <div class="dock__track"><div class="dock__fill" id="dockFill"></div><div class="dock__knob" id="dockKnob"></div></div>
+    <div class="dock__times">
+      <span id="dockCur">0:00</span>
+      <span class="dock__badge" id="dockBadge">高潮</span>
+      <span id="dockDur">0:00</span>
+    </div>
+  </div>
+
+  <div class="dock__bars" id="dockBars" aria-hidden="true"></div>
+
+  <div class="dock__ctrl">
+    <button class="dock__btn dock__btn--sm" id="dockPrev" aria-label="上一首">
+      <svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zm3 7 9-7v14z"/></svg>
+    </button>
+    <button class="dock__btn" id="dockToggle" aria-label="播放或暂停">
+      <svg class="dock__ico dock__ico--play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+      <svg class="dock__ico dock__ico--pause" viewBox="0 0 24 24"><path d="M7.5 5h3.2v14H7.5zm5.8 0h3.2v14h-3.2z"/></svg>
+    </button>
+    <button class="dock__btn dock__btn--sm" id="dockNext" aria-label="下一首">
+      <svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM5 5l9 7-9 7z"/></svg>
+    </button>
+    <button class="dock__btn dock__btn--sm dock__btn--tag" id="dockMode" title="切换 高潮 / 从头">高潮</button>
+  </div>
+</div>
+
+<div class="scroll-hint" id="scrollHint"><span>向下看我的歌单</span><i></i></div>
+
+<main id="main">
+
+<!-- ─────────── 序 ─────────── -->
+<section class="hero" id="sec-hero" data-label="序">
+  <div class="hero__bg">
+    <div class="hero__ring r1"></div>
+    <div class="hero__ring r2"></div>
+    <div class="hero__ring r3"></div>
+  </div>
+
+  <div class="hero__content">
+    <p class="hero__kicker"><span>MY PLAYLIST</span><span class="dot"></span><span>5 TRACKS</span></p>
+
+    <h1 class="hero__title">
+      <span class="ln"><span class="w" data-i="0">我</span><span class="w" data-i="1">的</span><span class="w" data-i="2">歌</span><span class="w" data-i="3">单</span></span>
+      <span class="ln ln--sub"><span class="w">五</span><span class="w">首</span><span class="w">我</span><span class="w">一</span><span class="w">听</span><span class="w">再</span><span class="w">听</span><span class="w">的</span><span class="w">歌</span></span>
+    </h1>
+
+    <p class="hero__namesLine">法老 · 回春丹 · 门尼 · 犬儒 · 草东没有派对</p>
+
+    <div class="hero__cta">
+      <button class="btn-hero" id="startBtn" data-cursor="听">
+        <span class="btn-hero__bg"></span>
+        <span class="btn-hero__label">听我的歌单</span>
+        <svg viewBox="0 0 24 24" class="btn-hero__arrow"><path d="M5 12h12m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="hero__note">整首歌都在这儿 · 从高潮开始，也可以拖回开头</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 1 · 法老 ─────────── -->
+<section class="artist" id="sec-pharaoh" data-label="法老" data-key="pharaoh"
+         style="--a1:#ff3b2f; --a2:#ff8a3d; --a3:#5a0d12;">
+  <div class="artist__bg" data-parallax="0.16">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <span class="ghost">PHARAOH</span>
+  </div>
+
+  <div class="artist__wrap">
+    <aside class="artist__side">
+      <span class="idx">01</span><span class="role">硬核说唱</span><span class="year">活死人</span>
+    </aside>
+
+    <div class="artist__main">
+      <div class="reveal">
+        <p class="tag">中文硬核说唱 · 现实主义的暴烈书写</p>
+        <h2 class="artist__name" data-split>法老</h2>
+        <p class="artist__en">PHARAOH</p>
+      </div>
+
+      <p class="artist__bio reveal">
+        中文说唱里少见的一类狠角色。语速像子弹，咬字却干净得像手术刀。
+        他不写爽文式的炫耀，专挑社会的暗角、底层的疲惫、小人物的荒诞，
+        把被忽略的现实一寸寸压进押韵里。听他的歌很少会跟着摇，
+        更多是被按在椅子上，听完最后那一秒。
+      </p>
+
+      <div class="facts reveal">
+        <div class="fact"><b>厂牌</b><span>活死人 Walker Union</span></div>
+        <div class="fact"><b>风格</b><span>硬核 / 叙事说唱</span></div>
+        <div class="fact"><b>我为什么喜欢</b><span>他敢把愤怒写成抒情诗</span></div>
+      </div>
+
+      <article class="track reveal"
+        data-file="audio/pharaoh.mp3" data-start="248" data-title="亲密爱人" data-artist="法老"
+        data-color="#ff3b2f" data-dur="317">
+        <div class="track__head">
+          <span class="track__no">我的最爱</span>
+          <h3 class="track__title">亲密爱人</h3>
+          <span class="track__year">2019</span>
+        </div>
+        <p class="track__desc">
+          一首把温柔和暴力绑在同一根弦上的歌。他把恋人的日常唱得极其具体，
+          又让整首歌一直悬在“会失去”的预感里 —— 越平静，越让人心口发紧。
+          我从 4:08 那段最重的部分开始放，几句说唱一出来，整首歌的重量就落地了。
+        </p>
+        <div class="track__prog"><i></i></div>
+        <div class="track__row">
+          <button class="play" data-cursor="播放" aria-label="播放 亲密爱人">
+            <span class="play__pulse"></span>
+            <svg class="play__ico play__ico--play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+            <svg class="play__ico play__ico--pause" viewBox="0 0 24 24"><path d="M7.5 5h3.2v14H7.5zm5.8 0h3.2v14h-3.2z"/></svg>
+          </button>
+          <div class="track__wave" aria-hidden="true"></div>
+          <span class="track__hint">整首可播 · 从 4:08 高潮处开始</span>
+        </div>
+      </article>
+
+      <blockquote class="quote reveal">“他把愤怒写成了抒情诗。”</blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 2 · 回春丹 ─────────── -->
+<section class="artist artist--flip" id="sec-huichundan" data-label="回春丹" data-key="huichundan"
+         style="--a1:#3ddc84; --a2:#a8ff78; --a3:#0b3d24;">
+  <div class="artist__bg" data-parallax="0.16">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <span class="ghost">HUI CHUN DAN</span>
+  </div>
+
+  <div class="artist__wrap">
+    <aside class="artist__side">
+      <span class="idx">02</span><span class="role">独立摇滚</span><span class="year">广西 · 北海</span>
+    </aside>
+
+    <div class="artist__main">
+      <div class="reveal">
+        <p class="tag">把复活写进名字里的乐队</p>
+        <h2 class="artist__name" data-split>回春丹</h2>
+        <p class="artist__en">HUI CHUN DAN</p>
+      </div>
+
+      <p class="artist__bio reveal">
+        “回春丹”本是老中医柜子里那味救命的药。这支广西乐队把名字当成了宣言：
+        要在这具被生活磨钝的身体上，重新灌进一点活气。
+        他们的旋律好听得近乎冒犯，副歌一开口就能让全场跟着吼，
+        可歌词的底色常常是失恋、告别、和不甘心的自我打捞。
+        明亮和溃败同时发生，这就是我最吃他们这一口的原因。
+      </p>
+
+      <div class="facts reveal">
+        <div class="fact"><b>来自</b><span>广西 · 北海</span></div>
+        <div class="fact"><b>风格</b><span>独立摇滚 / 流行摇滚</span></div>
+        <div class="fact"><b>我为什么喜欢</b><span>一开口就想跟着吼</span></div>
+      </div>
+
+      <article class="track reveal"
+        data-file="audio/huichundan.mp3" data-start="264" data-title="鲜花" data-artist="回春丹"
+        data-color="#3ddc84" data-dur="341">
+        <div class="track__head">
+          <span class="track__no">我的最爱</span>
+          <h3 class="track__title">鲜花</h3>
+          <span class="track__year">2023</span>
+        </div>
+        <p class="track__desc">
+          他们最被记住的那一首。副歌里那句“有我在的地方，永远开满了鲜花”，
+          像一句自我催眠，也像一句硬撑到底的承诺。
+          我从 4:24 最后一遍副歌切进去 —— 听过现场的人，基本都会在那儿失守。
+        </p>
+        <div class="track__prog"><i></i></div>
+        <div class="track__row">
+          <button class="play" data-cursor="播放" aria-label="播放 鲜花">
+            <span class="play__pulse"></span>
+            <svg class="play__ico play__ico--play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+            <svg class="play__ico play__ico--pause" viewBox="0 0 24 24"><path d="M7.5 5h3.2v14H7.5zm5.8 0h3.2v14h-3.2z"/></svg>
+          </button>
+          <div class="track__wave" aria-hidden="true"></div>
+          <span class="track__hint">整首可播 · 从 4:24 最猛副歌开始</span>
+        </div>
+      </article>
+
+      <blockquote class="quote reveal">“好听是天赋，把人唱哭是本事。”</blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 3 · 门尼 ─────────── -->
+<section class="artist" id="sec-meni" data-label="门尼" data-key="meni"
+         style="--a1:#f0a4c8; --a2:#9ec5ff; --a3:#2a2140;">
+  <div class="artist__bg" data-parallax="0.16">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <span class="ghost">MONEY</span>
+  </div>
+
+  <div class="artist__wrap">
+    <aside class="artist__side">
+      <span class="idx">03</span><span class="role">独立唱作人</span><span class="year">学院派</span>
+    </aside>
+
+    <div class="artist__main">
+      <div class="reveal">
+        <p class="tag">从琴房走出来的浪漫主义者</p>
+        <h2 class="artist__name" data-split>门尼</h2>
+        <p class="artist__en">MONEY</p>
+      </div>
+
+      <p class="artist__bio reveal">
+        他属于那种在学院和现场之间来回走的人：一边是科班的和声、编曲与教课，
+        一边是把私人情绪写成流行歌的冲动。
+        门尼的歌很少有宏大叙事，多的是暧昧的夜色、说不清的关系，
+        和成年人那种“明知道没结果还是想再试一次”的心软。
+        编曲偏爱老派的浪漫质感，听起来像一封封没寄出去的信。
+      </p>
+
+      <div class="facts reveal">
+        <div class="fact"><b>身份</b><span>唱作人 / 音乐制作</span></div>
+        <div class="fact"><b>风格</b><span>都市流行 / 抒情摇滚</span></div>
+        <div class="fact"><b>我为什么喜欢</b><span>不被定义的那种小众浪漫</span></div>
+      </div>
+
+      <article class="track reveal"
+        data-file="audio/meni.mp3" data-start="218" data-title="罗曼蒂克乌托邦" data-artist="门尼"
+        data-color="#f0a4c8" data-dur="247">
+        <div class="track__head">
+          <span class="track__no">我的最爱</span>
+          <h3 class="track__title">罗曼蒂克乌托邦</h3>
+          <span class="track__year">2024</span>
+        </div>
+        <p class="track__desc">
+          标题本身就是他的创作自白：在一个不太浪漫的年代，硬撑出一块浪漫的飞地。
+          歌里那种明知是幻觉也要住进去的倔强，是门尼最擅长的情绪。
+          我从 3:38 最后一遍副歌切进去，那是情绪最满的地方。
+        </p>
+        <div class="track__prog"><i></i></div>
+        <div class="track__row">
+          <button class="play" data-cursor="播放" aria-label="播放 罗曼蒂克乌托邦">
+            <span class="play__pulse"></span>
+            <svg class="play__ico play__ico--play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+            <svg class="play__ico play__ico--pause" viewBox="0 0 24 24"><path d="M7.5 5h3.2v14H7.5zm5.8 0h3.2v14h-3.2z"/></svg>
+          </button>
+          <div class="track__wave" aria-hidden="true"></div>
+          <span class="track__hint">整首可播 · 从 3:38 最后一遍副歌开始</span>
+        </div>
+      </article>
+
+      <blockquote class="quote reveal">“浪漫不是幻觉，是抵抗。”</blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 4 · 犬儒 ─────────── -->
+<section class="artist artist--flip" id="sec-cynic" data-label="犬儒" data-key="cynic"
+         style="--a1:#8f9bb3; --a2:#c9d4e6; --a3:#141821;">
+  <div class="artist__bg" data-parallax="0.16">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <span class="ghost">CYNIC</span>
+  </div>
+
+  <div class="artist__wrap">
+    <aside class="artist__side">
+      <span class="idx">04</span><span class="role">独立摇滚</span><span class="year">冷色现场</span>
+    </aside>
+
+    <div class="artist__main">
+      <div class="reveal">
+        <p class="tag">直面自我的冷色摇滚</p>
+        <h2 class="artist__name" data-split>犬儒</h2>
+        <p class="artist__en">CYNIC</p>
+      </div>
+
+      <p class="artist__bio reveal">
+        把“犬儒”当队名，本身就是一次自我审讯 —— 承认自己的清醒里掺着逃避，
+        也承认愤世嫉俗底下还压着没死透的期待。
+        他们的现场很少讨好听众：吉他线条冷、鼓点硬、唱腔像把情绪直接拽出来，
+        但那股坦白劲儿会让人卸下防备。
+        他们唱的是拆穿自己之后，还得继续活下去的那份难堪与体面。
+      </p>
+
+      <div class="facts reveal">
+        <div class="fact"><b>风格</b><span>独立摇滚 / 另类摇滚</span></div>
+        <div class="fact"><b>现场</b><span>冷冽、直接、不修饰</span></div>
+        <div class="fact"><b>我为什么喜欢</b><span>先拆穿自己，才谈得上诚实</span></div>
+      </div>
+
+      <article class="track reveal"
+        data-file="audio/cynic.mp3" data-start="218" data-title="志铭" data-artist="犬儒"
+        data-color="#8f9bb3" data-dur="307">
+        <div class="track__head">
+          <span class="track__no">我的最爱</span>
+          <h3 class="track__title">志铭</h3>
+          <span class="track__year">2022</span>
+        </div>
+        <p class="track__desc">
+          歌名就写着结局。面对“这一生值不值”的追问，他们没给安慰，
+          而是选择把结论吼出来 —— 那是属于这一代人的墓志铭。
+          我从 3:38 那段最用力的地方切进去，那一下是真的掏空了在唱。
+        </p>
+        <div class="track__prog"><i></i></div>
+        <div class="track__row">
+          <button class="play" data-cursor="播放" aria-label="播放 志铭">
+            <span class="play__pulse"></span>
+            <svg class="play__ico play__ico--play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+            <svg class="play__ico play__ico--pause" viewBox="0 0 24 24"><path d="M7.5 5h3.2v14H7.5zm5.8 0h3.2v14h-3.2z"/></svg>
+          </button>
+          <div class="track__wave" aria-hidden="true"></div>
+          <span class="track__hint">整首可播 · 从 3:38 爆发段开始</span>
+        </div>
+      </article>
+
+      <blockquote class="quote reveal">“付之一炬吧，我贱烂的生命。”</blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 5 · 草东没有派对 ─────────── -->
+<section class="artist" id="sec-caodong" data-label="草东" data-key="caodong"
+         style="--a1:#6c7a89; --a2:#e0e6ec; --a3:#101418;">
+  <div class="artist__bg" data-parallax="0.16">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <span class="ghost">NO PARTY FOR CAO DONG</span>
+  </div>
+
+  <div class="artist__wrap">
+    <aside class="artist__side">
+      <span class="idx">05</span><span class="role">独立摇滚</span><span class="year">台北</span>
+    </aside>
+
+    <div class="artist__main">
+      <div class="reveal">
+        <p class="tag">一代人的丧与不甘</p>
+        <h2 class="artist__name" data-split>草东没有派对</h2>
+        <p class="artist__en">NO PARTY FOR CAO DONG</p>
+      </div>
+
+      <p class="artist__bio reveal">
+        他们几乎定义了一代华语青年的情绪形状：不是嚎啕大哭，而是那种
+        “干什么都提不起劲，却又清楚知道不该这样”的钝痛。
+        歌词直白到近乎残忍，编曲却克制、干净、留白极多 ——
+        鼓一压，吉他一推，主唱不加修饰的声线就把人拽进那股窒息感里。
+        2017 年他们拿下金曲奖最佳新人、最佳乐团，《大风吹》一夜之间变成集体记忆。
+      </p>
+
+      <div class="facts reveal">
+        <div class="fact"><b>来自</b><span>中国台湾 · 台北</span></div>
+        <div class="fact"><b>荣誉</b><span>第 28 届金曲奖 最佳新人 / 最佳乐团</span></div>
+        <div class="fact"><b>我为什么喜欢</b><span>丧，但不肯认输</span></div>
+      </div>
+
+      <article class="track reveal"
+        data-file="audio/caodong.mp3" data-start="186" data-title="大风吹" data-artist="草东没有派对"
+        data-color="#6c7a89" data-dur="236">
+        <div class="track__head">
+          <span class="track__no">我的最爱</span>
+          <h3 class="track__title">大风吹</h3>
+          <span class="track__year">2016</span>
+        </div>
+        <p class="track__desc">
+          收录在首张专辑《丑奴儿》。它把“想要却得不到”唱成了一场循环往复的风，
+          旋律简单到听一遍就会，却足够让任何一个正在努力生活的人安静下来。
+          我从 3:06 最后那波爆发切进去 —— 最扎心的就是这一段。
+        </p>
+        <div class="track__prog"><i></i></div>
+        <div class="track__row">
+          <button class="play" data-cursor="播放" aria-label="播放 大风吹">
+            <span class="play__pulse"></span>
+            <svg class="play__ico play__ico--play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
+            <svg class="play__ico play__ico--pause" viewBox="0 0 24 24"><path d="M7.5 5h3.2v14H7.5zm5.8 0h3.2v14h-3.2z"/></svg>
+          </button>
+          <div class="track__wave" aria-hidden="true"></div>
+          <span class="track__hint">整首可播 · 从 3:06 最后爆发开始</span>
+        </div>
+      </article>
+
+      <blockquote class="quote reveal">“哭啊，喊啊，叫你妈妈带你去买玩具啊。”</blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 尾 ─────────── -->
+<section class="outro" id="sec-outro" data-label="尾">
+  <div class="outro__glow"></div>
+  <div class="outro__inner">
+    <p class="outro__kicker">END OF MY PLAYLIST</p>
+    <h2 class="outro__title">这五首，我一个都舍不得删</h2>
+    <p class="outro__text">
+      这份歌单里没有一首是别人推给我的。它们有的陪我熬过很糟的日子，
+      有的只是某天在耳机里突然让我停下来发呆。
+      我把它们摆在这里，只为了让它们有个被认真放好的位置。
+    </p>
+
+    <div class="outro__grid" id="outroGrid"></div>
+
+    <div class="outro__actions">
+      <button class="btn-hero" id="playAllBtn" data-cursor="全播">
+        <span class="btn-hero__bg"></span>
+        <span class="btn-hero__label">从第一首开始连着放</span>
+      </button>
+      <button class="btn-ghost" id="stopAllBtn" data-cursor="停止">全部停止</button>
+      <a class="btn-ghost btn-ghost--link" href="code.html" data-cursor="看代码">查看源码</a>
+    </div>
+
+    <p class="outro__sign">MY PLAYLIST · 2026</p>
+  </div>
+</section>
+
+</main>
+
+<audio id="player" preload="metadata"></audio>
+
+<script src="app.js"></script>
+</body>
+</html>
