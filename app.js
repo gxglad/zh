@@ -104,7 +104,8 @@
 
     if (!isSame) {
       current = song;
-      audio.src = song.file;
+      /* 优先用预加载好的 Blob 地址：本地内存读取，不卡不断 */
+      audio.src = song.blobUrl || song.file;
       /* 必须先 load()，否则 metadata 不会开始加载 */
       audio.load();
       pendingSeek = fromClimax ? song.start : 0;
@@ -214,13 +215,16 @@
   });
 
   /* ============================================================
-     2. 载入页：黑胶转动 + 进度条，加载完直接进站（不自动播放）
+     2. 载入页：黑胶转动 + 真实预加载进度
+     把 5 首歌全部拉下来存成 Blob，进度来自真实字节数。
+     好处有两个：① 进度条不再是一段一段跳；② 之后播放 / 拖进度
+     完全不卡，因为不再依赖网络分段请求。
      ============================================================ */
   const intro     = $('#intro');
   const ripple    = $('#ripple');
   const introBar  = $('#introBar');
   const introPct  = $('#introPct');
-  const introCap  = document.querySelector('.intro__caption');
+  const introCap  = $('#introCaption');
 
   [0, 1, 2].forEach(() => ripple.appendChild(document.createElement('span')));
 
@@ -237,47 +241,87 @@
       onScroll();
     });
     setTimeout(() => { intro.style.display = 'none'; }, 1200);
-    /* 注意：进站后不自动播放，等用户主动点 */
+    /* 进站后不自动播放，等用户主动点 */
   }
 
-  /* 唱片转动一圈 = 进度条走满。用 rAF 读取真实旋转角度，
-     这样进度条和唱片是同一个节奏，而不是各转各的。
-     一圈时长通过 --turn 注入 CSS，两边共用同一个值。 */
-  const disc = $('#vinylDisc');
-  const TURN = 4200;          // 一圈毫秒数（与 CSS --turn 一致）
-  const SETTLE = 620;         // 走满之后再停留一会儿，避免戛然而止
+  /* ---- 预加载 ---- */
+  const MIN_SHOW = 1500;    // 最快也要让唱片转 1.5 秒，别一闪而过
+  const MAX_WAIT = 20000;   // 网络太慢时兜底放行，不让人干等
   const t0 = performance.now();
 
-  document.documentElement.style.setProperty('--turn', (TURN / 1000) + 's');
+  let loadedBytes = 0;
+  let totalBytes = 0;
+  let shown = 0;            // 屏幕上显示的进度（平滑后的值）
+  let finished = false;
 
-  function readAngle(el) {
-    const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
-    const deg = Math.atan2(m.b, m.a) * 180 / Math.PI;
-    return (deg % 360 + 360) % 360;
+  /* 每首：拉全量 → 存 Blob URL，之后播放零延迟 */
+  function preloadOne(song) {
+    return fetch(song.file, { cache: 'force-cache' })
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const len = Number(res.headers.get('content-length')) || 0;
+        totalBytes += len;
+
+        if (!res.body || !res.body.getReader) {
+          return res.blob().then((b) => { loadedBytes += len || b.size; song.blobUrl = URL.createObjectURL(b); });
+        }
+
+        const reader = res.body.getReader();
+        const chunks = [];
+        return (function pump() {
+          return reader.read().then((r) => {
+            if (r.done) {
+              const blob = new Blob(chunks, { type: 'audio/mpeg' });
+              song.blobUrl = URL.createObjectURL(blob);
+              return;
+            }
+            chunks.push(r.value);
+            loadedBytes += r.value.length;
+            return pump();
+          });
+        })();
+      })
+      .catch(() => null);   // 单首失败不阻断，回退用原地址流式播放
   }
 
-  let done = false;
+  const preloadAll = Promise.all(SONGS.map(preloadOne));
+
+  /* 进度条：以「时间」为主轴匀速推进，下载只作为闸门。
+     —— 时间主轴保证绝对平滑，不受网络分段、帧率高低影响。
+     —— 下载没完成时把进度压在 90% 以内，完成后再走完最后一段。 */
+  const DURATION = 2000;   // 从 0 到 100% 的基准时长（毫秒）
+  const GATE = 90;         // 未下载完时的进度上限
+
   (function loadLoop(now) {
     if (phase === 'out') return;
     requestAnimationFrame(loadLoop);
 
     const elapsed = now - t0;
-    /* 以时间为主轴（与动画同源，最稳），角度做校验兜底 */
-    let pct = clamp((elapsed / TURN) * 100, 0, 100);
+    const allLoaded = totalBytes > 0 && loadedBytes >= totalBytes;
 
-    /* 加速收尾：到 99% 后不要卡着不动 */
-    if (elapsed >= TURN) pct = 100;
+    /* 时间基准进度：匀速，永远平滑 */
+    let target = (elapsed / DURATION) * 100;
 
-    introBar.style.width = pct.toFixed(1) + '%';
+    /* 闸门：还没下完就不让冲过 GATE */
+    if (!allLoaded) target = Math.min(target, GATE);
+
+    /* 目标本身已是平滑直线，直接跟随即可；留一点点缓动防止数值抖动 */
+    shown = target;
+
+    const pct = clamp(shown, 0, 100);
+    introBar.style.width = pct.toFixed(2) + '%';
     introPct.textContent = Math.round(pct) + '%';
 
-    if (elapsed >= TURN + SETTLE && !done) {
-      done = true;
-      intro.classList.add('is-loaded');
-      introCap.textContent = '载入完成';
+    /* 下载完成 且 进度走满 → 收尾进站 */
+    if (allLoaded && pct >= 99.9 && !finished) {
+      finished = true;
       introBar.style.width = '100%';
       introPct.textContent = '100%';
-      enter();
+      preloadAll.then(() => {
+        intro.classList.add('is-loaded');
+        introCap.textContent = '载入完成';
+        setTimeout(enter, 320);
+      });
     }
   })(t0);
 
