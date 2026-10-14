@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>源码 · 我的歌单</title>
+<meta name="description" content="《我的歌单》完整源代码：index.html / styles.css / app.js / engine.js">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="code.css">
+</head>
+<body class="code-page">
+
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="code-head">
+  <div class="code-head__left">
+    <a class="code-back" href="index.html">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5m0 0 5-5m-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      回到歌单
+    </a>
+    <h1 class="code-title">源码</h1>
+    <p class="code-sub">整个站只有四个文件，没有框架、没有构建、没有依赖</p>
+  </div>
+
+  <div class="code-meta" id="codeMeta"></div>
+</header>
+
+<nav class="code-tabs" id="codeTabs" role="tablist"></nav>
+
+<section class="code-note" id="codeNote"></section>
+
+<main class="code-main">
+  <div class="code-toolbar">
+    <span class="code-file" id="codeFile">—</span>
+    <span class="code-stat" id="codeStat"></span>
+    <div class="code-actions">
+      <button class="code-btn" id="btnWrap" title="自动换行">换行：开</button>
+      <button class="code-btn" id="btnCopy">复制全文</button>
+      <a class="code-btn code-btn--link" id="btnRaw" href="#" target="_blank" rel="noopener">查看原始文件</a>
+    </div>
+  </div>
+
+  <div class="code-view" id="codeView">
+    <div class="code-loading" id="codeLoading">正在读取源码…</div>
+    <div class="code-body" id="codeBody" hidden>
+      <pre class="code-gutter" id="codeGutter" aria-hidden="true"></pre>
+      <pre class="code-code"><code id="codeCode"></code></pre>
+    </div>
+  </div>
+</main>
+
+<footer class="code-foot">
+  <p class="code-foot__sign">MY PLAYLIST · 2026</p>
+  <p class="code-foot__note">
+    音频为本地文件，仅供个人收藏与学习使用，版权归各音乐人及唱片公司所有。
+  </p>
+</footer>
+
+<script src="code.js"></script>
+</body>
+</html>
