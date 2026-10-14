@@ -72,33 +72,41 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   66%{transform:translate(3%,-2%)} 100%{transform:translate(0,0)}
 }
 
-/* ---- 居中容器 ---- */
+/* ---- 居中容器：唱片区真正居中，进度条绝对定位在下方，不影响居中 ---- */
 .intro__center{
-  position:relative; display:grid; justify-items:center;
-  gap: clamp(26px,5vh,52px);
+  position:relative;
+  display:grid; place-items:center;
+}
+
+/* 唱片区：涟漪与唱片共用同一圆心 */
+.vinyl-stage{
+  position:relative;
+  display:grid; place-items:center;
+  width: min(46vh, 360px); aspect-ratio:1;
 }
 
 .ripple{
-  position:absolute; top:0; left:50%; transform:translateX(-50%);
-  width:min(60vh,470px); aspect-ratio:1; border-radius:50%;
+  position:absolute; left:50%; top:50%;
+  transform: translate(-50%, -50%);
+  width:132%; aspect-ratio:1; border-radius:50%;
   pointer-events:none; opacity:1;
 }
 .ripple span{
   position:absolute; inset:0; border-radius:50%;
-  border:1px solid color-mix(in srgb, var(--a1) 55%, transparent);
+  border:1px solid color-mix(in srgb, var(--a1) 42%, transparent);
   animation: rippleOut 3.4s var(--ease-io) infinite;
 }
 .ripple span:nth-child(2){ animation-delay:1.13s }
 .ripple span:nth-child(3){ animation-delay:2.26s }
 @keyframes rippleOut{
-  0%{ transform:scale(.86); opacity:.9 }
-  100%{ transform:scale(1.5); opacity:0 }
+  0%{ transform:scale(.72); opacity:.85 }
+  100%{ transform:scale(1.28); opacity:0 }
 }
 
 /* ---- 黑胶本体 ---- */
 .vinyl{
   position:relative;
-  width: min(46vh, 360px); aspect-ratio:1;
+  width:100%; aspect-ratio:1;
   filter: drop-shadow(0 40px 80px rgba(0,0,0,.8));
 }
 .vinyl__disc{
@@ -110,8 +118,9 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,.07),
     inset 0 0 60px rgba(0,0,0,.9);
-  /* 载入期间自动旋转；一圈 = 进度条走满（时长由 JS 用 --turn 设定，保证两者同步） */
-  animation: spinDisc var(--turn, 3.8s) linear infinite;
+  /* 载入期间自动旋转；一圈 = 进度条走满。
+     时长直接写死在这里，不用 JS 注入 —— 注入会中途重启动画造成卡顿。 */
+  animation: spinDisc 3.8s linear infinite;
 }
 .intro.is-done .vinyl__disc{ animation-play-state: paused; }
 @keyframes spinDisc{ to{ transform: rotate(360deg) } }
@@ -190,12 +199,15 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow: 0 0 10px var(--a1);
 }
 
-/* ---- 进度条（跟着唱片转动一起加载） ---- */
+/* ---- 进度条：固定在视口底部，与唱片完全分离，不压到唱片上 ---- */
 .intro__load{
+  position:fixed; left:50%; bottom: clamp(40px, 8vh, 84px);
+  transform: translateX(-50%);
   width: min(74vw, 380px);
-  opacity:0; transform:translateY(10px);
-  animation: riseIn .8s var(--ease) .3s forwards;
+  opacity:0;
+  animation: fadeIn .7s var(--ease) .35s forwards;
 }
+@keyframes fadeIn{ to{ opacity:1 } }
 .intro__bar{
   position:relative; height:2px; border-radius:2px;
   background: rgba(255,255,255,.11); overflow:hidden;
@@ -204,7 +216,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   display:block; height:100%; width:0%;
   background: linear-gradient(90deg, var(--a2), var(--a1));
   box-shadow: 0 0 14px -1px var(--a1);
-  transition: width .22s linear;
+  /* 不加 transition —— 每帧都在赋值，transition 会和 rAF 打架，看起来一断一断的 */
 }
 .intro__meta{
   display:flex; align-items:baseline; justify-content:space-between;
@@ -215,7 +227,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .intro__pct{ color:var(--ink-dim); font-variant-numeric: tabular-nums; }
 .intro__caption{ transition: color .5s var(--ease); }
 .intro.is-loaded .intro__caption{ color: var(--a1); }
-@keyframes riseIn{ to{ opacity:1; transform:none } }
+@keyframes riseIn{ to{ opacity:1; transform:translateX(-50%) } }
 
 /* ============================================================
    2. 氛围层
