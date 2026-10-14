@@ -13,15 +13,15 @@
 </head>
 <body class="is-loading">
 
-<!-- ══════════════ 入场：黑胶自动旋转 ══════════════ -->
+<!-- ══════════════ 载入页：黑胶在中间转动 ══════════════ -->
 <div class="intro" id="intro">
   <div class="intro__noise"></div>
 
-  <div class="intro__stage">
+  <div class="intro__center">
     <div class="ripple" id="ripple"></div>
 
-    <div class="vinyl" id="vinyl" role="button" tabindex="0" aria-label="开始播放我的歌单">
-      <div class="vinyl__disc">
+    <div class="vinyl" id="vinyl">
+      <div class="vinyl__disc" id="vinylDisc">
         <div class="vinyl__grooves"></div>
         <div class="vinyl__sheen"></div>
         <div class="vinyl__label">
@@ -38,23 +38,13 @@
       </div>
     </div>
 
-    <div class="meters" id="meters"></div>
-  </div>
-
-  <div class="intro__text">
-    <p class="intro__eyebrow">NOW PLAYING · FROM MY OWN PLAYLIST</p>
-    <h1 class="intro__title"><span class="intro__t1">我的歌单</span></h1>
-    <p class="intro__sub" id="introSub">五个名字 · 五首我一听再听的歌</p>
-
-    <div class="intro__ready">
-      <button class="bigplay" id="enterBtn" aria-label="开始播放">
-        <span class="bigplay__ring"></span>
-        <svg viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>
-      </button>
-      <span class="intro__hint" id="introHint">点击唱片 · 开始播放</span>
+    <div class="intro__load">
+      <div class="intro__bar"><i id="introBar"></i></div>
+      <div class="intro__meta">
+        <span class="intro__caption">正在载入歌单</span>
+        <span class="intro__pct" id="introPct">0%</span>
+      </div>
     </div>
-
-    <ul class="intro__list" id="introList"></ul>
   </div>
 </div>
 
