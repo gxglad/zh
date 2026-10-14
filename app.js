@@ -214,45 +214,17 @@
   });
 
   /* ============================================================
-     2. 入场：黑胶自动旋转
+     2. 载入页：黑胶转动 + 进度条，加载完直接进站（不自动播放）
      ============================================================ */
   const intro     = $('#intro');
-  const introHint = $('#introHint');
-  const vinyl     = $('#vinyl');
   const ripple    = $('#ripple');
-  const metersEl  = $('#meters');
-  const introList = $('#introList');
+  const introBar  = $('#introBar');
+  const introPct  = $('#introPct');
+  const introCap  = document.querySelector('.intro__caption');
 
   [0, 1, 2].forEach(() => ripple.appendChild(document.createElement('span')));
 
-  const METERS = 22;
-  const meterBars = [];
-  for (let i = 0; i < METERS; i++) {
-    const b = document.createElement('i');
-    metersEl.appendChild(b);
-    meterBars.push(b);
-  }
-
-  /* 曲目清单 */
-  SONGS.forEach((s, i) => {
-    const li = document.createElement('li');
-    li.innerHTML = '<span class="n">' + String(i + 1).padStart(2, '0') + '</span>' +
-                   '<span class="t">' + s.title + '</span>' +
-                   '<span class="a">' + s.artist + '</span>';
-    li.style.setProperty('--c', s.color);
-    li.addEventListener('click', (e) => { e.stopPropagation(); pendingSong = s; enter(); });
-    introList.appendChild(li);
-  });
-
-  let phase = 'spinning';
-  let pendingSong = null;
-
-  function stage() {
-    if (phase !== 'spinning') return;
-    phase = 'staged';
-    intro.classList.add('is-staged');
-    introHint.textContent = '点任意一首开始 · 或点唱片直接播放';
-  }
+  let phase = 'loading';
 
   function enter() {
     if (phase === 'out') return;
@@ -262,35 +234,52 @@
     requestAnimationFrame(() => {
       document.body.classList.add('is-ready');
       window.scrollTo(0, 0);
+      onScroll();
     });
     setTimeout(() => { intro.style.display = 'none'; }, 1200);
-    setTimeout(() => { playSong(pendingSong || SONGS[0], true); }, reduce ? 60 : 700);
+    /* 注意：进站后不自动播放，等用户主动点 */
   }
 
-  vinyl.addEventListener('click', enter);
-  vinyl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.code === 'Space') { e.preventDefault(); enter(); }
-  });
-  $('#enterBtn').addEventListener('click', (e) => { e.stopPropagation(); enter(); });
+  /* 唱片转动一圈 = 进度条走满。用 rAF 读取真实旋转角度，
+     这样进度条和唱片是同一个节奏，而不是各转各的。
+     一圈时长通过 --turn 注入 CSS，两边共用同一个值。 */
+  const disc = $('#vinylDisc');
+  const TURN = 4200;          // 一圈毫秒数（与 CSS --turn 一致）
+  const SETTLE = 620;         // 走满之后再停留一会儿，避免戛然而止
+  const t0 = performance.now();
 
-  /* 唱片自动开转（唱针落针） */
-  setTimeout(() => { intro.classList.add('is-playing'); }, 400);
-  /* 2.4s 后展开曲目清单 */
-  setTimeout(stage, 2400);
-  /* 6s 后自动进入页面主体（不强行播放，遵守浏览器自动播放策略） */
-  setTimeout(() => { if (phase !== 'out') { stage(); enter(); } }, 6000);
+  document.documentElement.style.setProperty('--turn', (TURN / 1000) + 's');
 
-  const introT0 = performance.now();
-  (function meterLoop(now) {
+  function readAngle(el) {
+    const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+    const deg = Math.atan2(m.b, m.a) * 180 / Math.PI;
+    return (deg % 360 + 360) % 360;
+  }
+
+  let done = false;
+  (function loadLoop(now) {
     if (phase === 'out') return;
-    requestAnimationFrame(meterLoop);
-    const t = (now - introT0) / 1000;
-    for (let i = 0; i < METERS; i++) {
-      const env = 0.5 + 0.5 * Math.sin(t * 3.1 - i * 0.28);
-      const v = 0.16 + env * (1 - i / METERS) * 0.84;
-      meterBars[i].style.height = (clamp(v, 0.08, 1) * 100).toFixed(1) + '%';
+    requestAnimationFrame(loadLoop);
+
+    const elapsed = now - t0;
+    /* 以时间为主轴（与动画同源，最稳），角度做校验兜底 */
+    let pct = clamp((elapsed / TURN) * 100, 0, 100);
+
+    /* 加速收尾：到 99% 后不要卡着不动 */
+    if (elapsed >= TURN) pct = 100;
+
+    introBar.style.width = pct.toFixed(1) + '%';
+    introPct.textContent = Math.round(pct) + '%';
+
+    if (elapsed >= TURN + SETTLE && !done) {
+      done = true;
+      intro.classList.add('is-loaded');
+      introCap.textContent = '载入完成';
+      introBar.style.width = '100%';
+      introPct.textContent = '100%';
+      enter();
     }
-  })(introT0);
+  })(t0);
 
   /* ============================================================
      3. 曲目卡按钮
